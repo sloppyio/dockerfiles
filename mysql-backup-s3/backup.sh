@@ -93,6 +93,7 @@ else
   echo "Creating dump for ${MYSQLDUMP_DATABASE} from ${MYSQL_HOST}..."
 
   DUMP_FILE="/tmp/dump.sql.gz"
+  DUMP_FILE_ENCRYPTED="/tmp/encdump.sql.gz"
 
   mysqldump $MYSQL_HOST_OPTS $MYSQLDUMP_OPTIONS $MYSQLDUMP_DATABASE | gzip > $DUMP_FILE
   openssl enc -aes-256-cbc -salt -k "${AES_PASSPHRASE}" -in $DUMP_FILE -out $DUMP_FILE_ENCRYPTED
