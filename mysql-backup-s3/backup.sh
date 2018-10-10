@@ -71,7 +71,8 @@ if [ ! -z "$(echo $MULTI_FILES | grep -i -E "(yes|true|1)")" ]; then
   for DB in $DATABASES; do
     echo "Creating individual dump of ${DB} from ${MYSQL_HOST}..."
 
-    DUMP_FILE="/tmp/${DB}.sql.gz"
+    DUMP_FILE="/tmp/unencrypted${DB}.sql.gz"
+    DUMP_FILE_ENCRYPTED="/tmp/${DB}.sql.gz"
 
     mysqldump $MYSQL_HOST_OPTS $MYSQLDUMP_OPTIONS --databases $DB | gzip > $DUMP_FILE
 
@@ -81,8 +82,8 @@ if [ ! -z "$(echo $MULTI_FILES | grep -i -E "(yes|true|1)")" ]; then
       else
         S3_FILE="${S3_FILENAME}.${DB}.sql.gz"
       fi
-
-      copy_s3 $DUMP_FILE $S3_FILE
+      openssl enc -aes-256-cbc -salt -k "${AES_PASSPHRASE}" -in $DUMP_FILE -out $DUMP_FILE_ENCRYPTED
+      copy_s3 $DUMP_FILE_ENCRYPTED $S3_FILE
     else
       >&2 echo "Error creating dump of ${DB}"
     fi
@@ -92,7 +93,9 @@ else
   echo "Creating dump for ${MYSQLDUMP_DATABASE} from ${MYSQL_HOST}..."
 
   DUMP_FILE="/tmp/dump.sql.gz"
+
   mysqldump $MYSQL_HOST_OPTS $MYSQLDUMP_OPTIONS $MYSQLDUMP_DATABASE | gzip > $DUMP_FILE
+  openssl enc -aes-256-cbc -salt -k "${AES_PASSPHRASE}" -in $DUMP_FILE -out $DUMP_FILE_ENCRYPTED
 
   if [ $? == 0 ]; then
     if [ "${S3_FILENAME}" == "**None**" ]; then
@@ -101,7 +104,7 @@ else
       S3_FILE="${S3_FILENAME}.sql.gz"
     fi
 
-    copy_s3 $DUMP_FILE $S3_FILE
+    copy_s3 $DUMP_FILE_ENCRYPTED $S3_FILE
   else
     >&2 echo "Error creating dump of all databases"
   fi
